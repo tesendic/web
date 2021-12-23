@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Fastfoods</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+ <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+   integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+   crossorigin=""></script>
+   <style>
+      html, body {
+        height: 100%;
+        padding: 0;
+        margin: 0;
+      }
+      #map {
+        /* configure the size of the map */
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+</head>
+<body>
+
+
+
+<div id="map"></div>
+<script>
+	var map = L.map('map').setView({lon: -77.866926, lat: 38.551970}, 7);
+	
+	// add the OpenStreetMap tiles
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	  maxZoom: 19,
+	  attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+	}).addTo(map);
+	
+	var overlays = {
+	    Fastfoods: L.tileLayer.wms('http://localhost:8080/geoserver/test/wms?', {
+	        layers: 'test:fastfoods',
+	        transparent: true,
+	        format: 'image/png' 
+	    }),
+
+	    Roads: L.tileLayer.wms('http://localhost:8080/geoserver/test/wms?', {
+	        layers: 'test:roads',
+        	transparent: true,
+            format: 'image/png' 
+	    })
+	};
+
+	L.control.layers(null, overlays).addTo(map);
+	
+	var marker;
+	var layer;
+	
+	function onMapClick(e) {
+		if (marker != undefined) {
+			map.removeLayer(marker);
+		}
+		marker = L.marker(e.latlng).addTo(map);
+		if (layer != undefined) {
+			 map.removeLayer(layer)
+		}
+		var baseUrl = "http://localhost:8080/geoserver/test/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=test%3AfastfoodsByLocation&srsName=EPSG:4326&outputFormat=application%2Fjson";
+		var url = baseUrl + "&viewparams=lon:" + e.latlng.lng + ";lat:" + e.latlng.lat
+		load(url);
+		
+		async function load(url) {
+		    let obj = await (await fetch(url)).json();
+		    layer = L.geoJSON(obj,{
+		        pointToLayer: function (feature, latlng) {
+		            return L.circleMarker(latlng, {
+		            	radius: 5,
+		                fillColor: "#ff7800",
+		                color: "#000",
+		                weight: 1,
+		                opacity: 1,
+		                fillOpacity: 0.8
+		            });
+		        }
+		    }).addTo(map);
+		}
+		
+		// spring server
+		/* var url = "http://localhost:8080/FastFoodsAPI/fastfoods/getByLocationGeoJson";
+		var data = { longitude: e.latlng.lng, latitude: e.latlng.lat }
+		loadPost(data);
+		
+		async function loadPost() {
+		    let obj = await (await fetch(url, {
+		    	method: 'POST',
+		    	mode: 'cors',
+		    	headers: {
+      				'Content-Type': 'application/json'
+    				},
+		    	body: JSON.stringify(data)
+		    })).json();
+		    layer = L.geoJSON(obj,{
+		        pointToLayer: function (feature, latlng) {
+		            return L.circleMarker(latlng, {
+		            	radius: 5,
+		                fillColor: "#ff7800",
+		                color: "#000",
+		                weight: 1,
+		                opacity: 1,
+		                fillOpacity: 0.8
+		            });
+		        }
+		    }).addTo(map);
+		} */
+	}
+
+	map.on('click', onMapClick);
+
+</script>
+
+</body>
+</html>
